@@ -1,4 +1,4 @@
-import { apiFetch, setAccessToken } from "./api";
+import { setAccessToken } from "./api";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE!;
 
@@ -7,7 +7,7 @@ export async function login(phone_number: string, password: string) {
     method: "POST",
     credentials: "include",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ phone_number, password })
+    body: JSON.stringify({ phone_number, password }),
   });
 
   if (!res.ok) throw new Error(await res.text());
@@ -16,19 +16,22 @@ export async function login(phone_number: string, password: string) {
   return data;
 }
 
-export async function register(payload: unknown) {
+export async function registerUser(payload: {
+  name: string;
+  phone_number: string;
+  email?: string;
+  password: string;
+  age?: number;
+  sex?: "MALE" | "FEMALE";
+  location?: string;
+}) {
   const res = await fetch(`${API_BASE}/auth/register`, {
     method: "POST",
     credentials: "include",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(payload)
+    body: JSON.stringify(payload),
   });
 
   if (!res.ok) throw new Error(await res.text());
   return res.json();
-}
-
-export async function logout() {
-  await apiFetch("/auth/logout", { method: "POST" });
-  setAccessToken(null);
 }
