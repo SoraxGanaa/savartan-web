@@ -10,7 +10,7 @@ export default function AuthGate({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     (async () => {
-      const res = await apiFetch("/me", { method: "GET" });
+      const res = await apiFetch("/pets?limit=1", { method: "GET" });
       if (!res.ok) {
         router.replace("/login");
         return;
