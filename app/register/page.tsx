@@ -58,7 +58,7 @@ export default function RegisterPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-emerald-50 to-white">
+    <div className="min-h-screen bg-linear-to-b from-emerald-50 to-white">
       <div className="mx-auto flex min-h-screen max-w-md items-center px-4">
         <Card className="w-full rounded-2xl shadow-sm">
           <CardHeader>
@@ -69,7 +69,7 @@ export default function RegisterPage() {
           <CardContent className="space-y-4">
             {err && (
               <Alert variant="destructive">
-                <AlertDescription className="break-words">{err}</AlertDescription>
+                <AlertDescription className="wrap-break-word">{err}</AlertDescription>
               </Alert>
             )}
 
