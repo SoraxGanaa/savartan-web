@@ -3,13 +3,13 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
-import AuthGate from "@/app/pets/components/AuthGate";
+import AuthGate from "@/app/components/AuthGate";
 import { apiFetch } from "@/app/lib/api";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
+import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Badge } from "@/components/ui/badge";
 
 type Pet = {
   id: string;
@@ -17,40 +17,94 @@ type Pet = {
   type: "DOG" | "CAT";
   category: "STRAY" | "OWNED";
   location: string | null;
+  age?: number | null;
+  breed?: string | null;
+
+  sprayed?: boolean;
+  vaccinated?: boolean;
+  dewormed?: boolean;
+
   created_at: string;
   is_active: boolean;
+
   profile_img?: string | null;
 };
 
 export default function PetsPage() {
+  // Top search inputs (not applied until Search clicked)
+  const [search, setSearch] = useState("");
+  const [location, setLocation] = useState("");
+
+  // Left filters UI state
+  const [typeDog, setTypeDog] = useState(true);
+  const [typeCat, setTypeCat] = useState(true);
+
+  const [category, setCategory] = useState<"" | "STRAY" | "OWNED">("");
+  const [isActive, setIsActive] = useState<"" | "true" | "false">("true");
+
+  const [sprayedOnly, setSprayedOnly] = useState(false);
+  const [vaccinatedOnly, setVaccinatedOnly] = useState(false);
+  const [dewormedOnly, setDewormedOnly] = useState(false);
+
+  // Applied (only changes when user clicks Search/Apply)
+  const [applied, setApplied] = useState({
+    search: "",
+    location: "",
+    typeDog: true,
+    typeCat: true,
+    category: "" as "" | "STRAY" | "OWNED",
+    isActive: "true" as "" | "true" | "false",
+    sprayedOnly: false,
+    vaccinatedOnly: false,
+    dewormedOnly: false,
+  });
+
   const [pets, setPets] = useState<Pet[]>([]);
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState<string | null>(null);
 
-  // filters
-  const [search, setSearch] = useState("");
-  const [type, setType] = useState<"" | "DOG" | "CAT">("");
-  const [category, setCategory] = useState<"" | "STRAY" | "OWNED">("");
-  const [isActive, setIsActive] = useState<"" | "true" | "false">("true");
-
   const queryString = useMemo(() => {
     const q = new URLSearchParams();
-    if (search.trim()) q.set("search", search.trim());
-    if (type) q.set("type", type);
-    if (category) q.set("category", category);
-    if (isActive) q.set("is_active", isActive);
     q.set("limit", "60");
+
+    if (applied.search.trim()) q.set("search", applied.search.trim());
+    if (applied.location.trim()) q.set("location", applied.location.trim());
+
+    // Category
+    if (applied.category) q.set("category", applied.category);
+
+    // is_active
+    if (applied.isActive) q.set("is_active", applied.isActive);
+
+    // Type rule:
+    // - both checked => no "type" param (means all)
+    // - one checked => type=DOG/CAT
+    // - none checked => return empty UI (avoid API confusion)
+    if (applied.typeDog && !applied.typeCat) q.set("type", "DOG");
+    if (!applied.typeDog && applied.typeCat) q.set("type", "CAT");
+
+    // Health booleans (true only)
+    if (applied.sprayedOnly) q.set("sprayed", "true");
+    if (applied.vaccinatedOnly) q.set("vaccinated", "true");
+    if (applied.dewormedOnly) q.set("dewormed", "true");
+
     return q.toString();
-  }, [search, type, category, isActive]);
+  }, [applied]);
 
   async function load() {
     setErr(null);
+
+    // If user unchecks both DOG and CAT => show empty list
+    if (!applied.typeDog && !applied.typeCat) {
+      setPets([]);
+      return;
+    }
+
     setLoading(true);
     try {
       const res = await apiFetch(`/pets?${queryString}`, { method: "GET" });
       if (!res.ok) throw new Error(await res.text());
-      const data = await res.json();
-      setPets(data);
+      setPets(await res.json());
     } catch (e: any) {
       setErr(e?.message ?? "Failed to load pets");
     } finally {
@@ -63,53 +117,113 @@ export default function PetsPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [queryString]);
 
+  function applyFilters() {
+    setApplied({
+      search,
+      location,
+      typeDog,
+      typeCat,
+      category,
+      isActive,
+      sprayedOnly,
+      vaccinatedOnly,
+      dewormedOnly,
+    });
+  }
+
+  function resetAll() {
+    setSearch("");
+    setLocation("");
+    setTypeDog(true);
+    setTypeCat(true);
+    setCategory("");
+    setIsActive("true");
+    setSprayedOnly(false);
+    setVaccinatedOnly(false);
+    setDewormedOnly(false);
+
+    setApplied({
+      search: "",
+      location: "",
+      typeDog: true,
+      typeCat: true,
+      category: "",
+      isActive: "true",
+      sprayedOnly: false,
+      vaccinatedOnly: false,
+      dewormedOnly: false,
+    });
+  }
+
   return (
     <AuthGate>
-      <div className="min-h-screen bg-linear-to-b from-emerald-50 to-white">
-        <div className="mx-auto max-w-5xl px-4 py-10">
-          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-            <div>
-              <h1 className="text-2xl font-semibold">Pets</h1>
-              <p className="text-sm text-muted-foreground">
-                Filter and browse. Upload media when posting.
-              </p>
-            </div>
-
-            <div className="flex gap-2">
-              <Button variant="outline" onClick={load} disabled={loading}>
-                Refresh
-              </Button>
-              <Button asChild className="bg-emerald-600 hover:bg-emerald-700">
-                <Link href="/pets/new">Post pet</Link>
-              </Button>
-            </div>
-          </div>
-
-          {/* Filters */}
-          <Card className="mt-6 rounded-2xl">
-            <CardContent className="grid gap-4 p-4 sm:grid-cols-4">
-              <div className="space-y-2 sm:col-span-2">
-                <Label>Search</Label>
+      <div className="min-h-screen bg-white">
+        {/* Top bar */}
+        <div className="border-b bg-white">
+          <div className="mx-auto max-w-6xl px-4 py-6">
+            {/* Search bar top */}
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+              <div className="flex w-full items-center gap-2 rounded-2xl border bg-white px-3 py-2">
+                <span className="text-muted-foreground">🔎</span>
                 <Input
-                  placeholder="name, breed, location..."
+                  className="border-0 shadow-none focus-visible:ring-0"
+                  placeholder="Search for a pet..."
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
                 />
               </div>
 
-              <div className="space-y-2">
-                <Label>Type</Label>
-                <select
-                  className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
-                  value={type}
-                  onChange={(e) => setType(e.target.value as any)}
-                >
-                  <option value="">All</option>
-                  <option value="DOG">DOG</option>
-                  <option value="CAT">CAT</option>
-                </select>
+              <Button
+                className="h-11 rounded-2xl bg-emerald-600 hover:bg-emerald-700"
+                onClick={applyFilters}
+              >
+                Search
+              </Button>
+
+              <Button variant="outline" className="h-11 rounded-2xl" onClick={resetAll}>
+                Reset
+              </Button>
+            </div>
+
+            <div className="mt-4 flex items-center justify-between">
+              <div>
+                <h1 className="text-lg font-semibold">Adoptable Pets</h1>
+                <p className="text-sm text-muted-foreground">
+                  {loading ? "Loading..." : `${pets.length} pets found`}
+                </p>
               </div>
 
+              <Button asChild className="rounded-2xl bg-emerald-600 hover:bg-emerald-700">
+                <Link href="/pets/new">Post pet</Link>
+              </Button>
+            </div>
+
+            {err && (
+              <div className="mt-4 rounded-2xl border border-red-200 bg-red-50 p-3 text-sm text-red-700">
+                {err}
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Body: left filters + right cards */}
+        <div className="mx-auto grid max-w-6xl gap-6 px-4 py-8 lg:grid-cols-[280px_1fr]">
+          {/* Left filters */}
+          <aside className="h-fit rounded-2xl border bg-white p-4">
+            <h2 className="text-sm font-semibold">Filters</h2>
+
+            <div className="mt-5 space-y-5">
+              {/* Location */}
+              <div className="space-y-2">
+                <Label>Location</Label>
+                <Input
+                  placeholder="UB, Bayanzurkh..."
+                  value={location}
+                  onChange={(e) => setLocation(e.target.value)}
+                />
+              </div>
+
+              {/* Category */}
               <div className="space-y-2">
                 <Label>Category</Label>
                 <select
@@ -123,6 +237,36 @@ export default function PetsPage() {
                 </select>
               </div>
 
+              {/* Type */}
+              <div className="space-y-2">
+                <Label>Pet Type</Label>
+
+                <label className="flex items-center gap-2 text-sm">
+                  <input
+                    type="checkbox"
+                    checked={typeDog}
+                    onChange={(e) => setTypeDog(e.target.checked)}
+                    className="h-4 w-4"
+                  />
+                  Dog
+                </label>
+
+                <label className="flex items-center gap-2 text-sm">
+                  <input
+                    type="checkbox"
+                    checked={typeCat}
+                    onChange={(e) => setTypeCat(e.target.checked)}
+                    className="h-4 w-4"
+                  />
+                  Cat
+                </label>
+
+                {!typeDog && !typeCat && (
+                  <p className="text-xs text-red-600">Select at least one type.</p>
+                )}
+              </div>
+
+              {/* Status */}
               <div className="space-y-2">
                 <Label>Status</Label>
                 <select
@@ -136,80 +280,125 @@ export default function PetsPage() {
                 </select>
               </div>
 
-              <div className="flex items-end gap-2 sm:col-span-3">
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => {
-                    setSearch("");
-                    setType("");
-                    setCategory("");
-                    setIsActive("true");
-                  }}
-                >
-                  Reset
-                </Button>
+              {/* Health */}
+              <div className="space-y-2">
+                <Label>Health</Label>
+
+                <label className="flex items-center gap-2 text-sm">
+                  <input
+                    type="checkbox"
+                    checked={sprayedOnly}
+                    onChange={(e) => setSprayedOnly(e.target.checked)}
+                    className="h-4 w-4"
+                  />
+                  Sprayed only
+                </label>
+
+                <label className="flex items-center gap-2 text-sm">
+                  <input
+                    type="checkbox"
+                    checked={vaccinatedOnly}
+                    onChange={(e) => setVaccinatedOnly(e.target.checked)}
+                    className="h-4 w-4"
+                  />
+                  Vaccinated only
+                </label>
+
+                <label className="flex items-center gap-2 text-sm">
+                  <input
+                    type="checkbox"
+                    checked={dewormedOnly}
+                    onChange={(e) => setDewormedOnly(e.target.checked)}
+                    className="h-4 w-4"
+                  />
+                  Dewormed only
+                </label>
               </div>
-            </CardContent>
-          </Card>
 
-          {err && (
-            <div className="mt-6 rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">
-              {err}
+              <Button variant="outline" className="w-full rounded-2xl" onClick={applyFilters}>
+                Apply
+              </Button>
             </div>
-          )}
+          </aside>
 
-          {loading ? (
-            <div className="mt-10 text-sm text-muted-foreground">Loading...</div>
-          ) : pets.length === 0 ? (
-            <Card className="mt-8 rounded-2xl">
-              <CardHeader>
-                <CardTitle>No pets found</CardTitle>
-              </CardHeader>
-              <CardContent className="text-sm text-muted-foreground">
-                Try clearing filters or post the first pet.
-              </CardContent>
-            </Card>
-          ) : (
-            <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-              {pets.map((p) => (
-                <Link key={p.id} href={`/pets/${p.id}`}>
-                  <Card className="rounded-2xl transition hover:shadow-sm">
+          {/* Right cards */}
+          <section>
+            {loading ? (
+              <div className="text-sm text-muted-foreground">Loading pets...</div>
+            ) : pets.length === 0 ? (
+              <Card className="rounded-2xl">
+                <CardContent className="p-6 text-sm text-muted-foreground">
+                  No pets found. Try adjusting search or filters.
+                </CardContent>
+              </Card>
+            ) : (
+              <div className="grid gap-5 sm:grid-cols-2 xl:grid-cols-3">
+                {pets.map((p) => (
+                  <Card key={p.id} className="rounded-2xl border shadow-sm">
                     <CardContent className="p-3">
-                      {p.profile_img ? (
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img
-                          src={p.profile_img}
-                          alt={p.name}
-                          className="h-44 w-full rounded-xl object-cover"
-                        />
-                      ) : (
-                        <div className="flex h-44 w-full items-center justify-center rounded-xl bg-muted text-xs text-muted-foreground">
-                          No image
+                      <div className="relative">
+                        {p.profile_img ? (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img
+                            src={p.profile_img}
+                            alt={p.name}
+                            className="h-44 w-full rounded-xl object-cover"
+                          />
+                        ) : (
+                          <div className="flex h-44 w-full items-center justify-center rounded-xl bg-muted text-xs text-muted-foreground">
+                            No image
+                          </div>
+                        )}
+
+                        <div className="absolute left-2 top-2 flex flex-wrap gap-2">
+                          {p.sprayed && (
+                            <span className="rounded-full bg-emerald-600 px-2 py-1 text-xs text-white">
+                              Sprayed
+                            </span>
+                          )}
+                          {p.vaccinated && (
+                            <span className="rounded-full bg-white/90 px-2 py-1 text-xs">
+                              Vaccinated
+                            </span>
+                          )}
+                          {p.dewormed && (
+                            <span className="rounded-full bg-white/90 px-2 py-1 text-xs">
+                              Dewormed
+                            </span>
+                          )}
                         </div>
-                      )}
 
-                      <div className="mt-3 flex items-center justify-between">
-                        <p className="truncate text-base font-semibold">{p.name}</p>
-                        <Badge variant="secondary">{p.type}</Badge>
+              
                       </div>
 
-                      <div className="mt-2 flex flex-wrap gap-2">
-                        <Badge className="bg-emerald-600 hover:bg-emerald-600">
-                          {p.category}
-                        </Badge>
-                        {p.location && <Badge variant="outline">{p.location}</Badge>}
+                      <div className="mt-3 flex items-start justify-between gap-3">
+                        <div className="min-w-0">
+                          <p className="truncate text-base font-semibold">{p.name}</p>
+                          <p className="mt-1 text-xs text-muted-foreground">
+                             {p.location || "Unknown"}
+                          </p>
+                        </div>
+
+                        <div className="flex flex-col items-end gap-2">
+                          <Badge variant="secondary">{p.type}</Badge>
+                          <Badge className="bg-emerald-600 hover:bg-emerald-600">
+                            {p.category}
+                          </Badge>
+                        </div>
                       </div>
 
-                      <p className="mt-2 text-xs text-muted-foreground">
-                        {new Date(p.created_at).toLocaleString()}
-                      </p>
+                      <Button
+                        asChild
+                        className="mt-3 w-full rounded-xl bg-emerald-600 hover:bg-emerald-700"
+                      >
+                        <Link href={`/pets/${p.id}`}>View Details</Link>
+                      </Button>
                     </CardContent>
                   </Card>
-                </Link>
-              ))}
-            </div>
-          )}
+                ))}
+              </div>
+            )}
+          </section>
         </div>
       </div>
     </AuthGate>

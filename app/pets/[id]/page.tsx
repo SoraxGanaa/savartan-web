@@ -3,20 +3,21 @@
 
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
-import AuthGate from "@/app/pets/components/AuthGate";
+import AuthGate from "@/app/components/AuthGate";
 import { apiFetch } from "@/app/lib/api";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 
 export default function PetDetailPage() {
-  const params = useParams<{ id: string }>();
-  const id = params.id;
+  const { id } = useParams<{ id: string }>();
   const router = useRouter();
 
-  const [data, setData] = useState<any>(null);
-  const [err, setErr] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [err, setErr] = useState<string | null>(null);
+
+  const [pet, setPet] = useState<any>(null);
+  const [media, setMedia] = useState<any[]>([]);
 
   async function load() {
     setErr(null);
@@ -24,7 +25,9 @@ export default function PetDetailPage() {
     try {
       const res = await apiFetch(`/pets/${id}`, { method: "GET" });
       if (!res.ok) throw new Error(await res.text());
-      setData(await res.json());
+      const data = await res.json();
+      setPet(data.pet);
+      setMedia(data.media || []);
     } catch (e: any) {
       setErr(e?.message ?? "Failed to load pet");
     } finally {
@@ -37,16 +40,6 @@ export default function PetDetailPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
 
-  async function handleDelete() {
-    if (!confirm("Delete this pet? This will also delete media from S3.")) return;
-    const res = await apiFetch(`/pets/${id}`, { method: "DELETE" });
-    if (!res.ok) {
-      alert(await res.text());
-      return;
-    }
-    router.push("/pets");
-  }
-
   return (
     <AuthGate>
       <div className="min-h-screen bg-linear-to-b from-emerald-50 to-white">
@@ -54,9 +47,6 @@ export default function PetDetailPage() {
           <div className="flex items-center justify-between">
             <Button variant="outline" onClick={() => router.push("/pets")}>
               Back
-            </Button>
-            <Button variant="destructive" onClick={handleDelete}>
-              Delete
             </Button>
           </div>
 
@@ -67,53 +57,64 @@ export default function PetDetailPage() {
           )}
 
           {loading ? (
-            <div className="mt-10 text-sm text-muted-foreground">Loading...</div>
-          ) : !data ? null : (
+            <div className="mt-8 text-sm text-muted-foreground">Loading...</div>
+          ) : !pet ? (
+            <div className="mt-8 text-sm text-muted-foreground">Not found</div>
+          ) : (
             <Card className="mt-6 rounded-2xl">
               <CardHeader>
-                <div className="flex items-center justify-between gap-3">
-                  <div>
-                    <CardTitle className="text-2xl">{data.pet.name}</CardTitle>
-                    <CardDescription className="mt-1">
-                      {data.pet.location || "No location"}
-                    </CardDescription>
-                  </div>
+                <CardTitle className="flex items-center justify-between">
+                  <span>{pet.name}</span>
                   <div className="flex gap-2">
-                    <Badge variant="secondary">{data.pet.type}</Badge>
-                    <Badge className="bg-emerald-600 hover:bg-emerald-600">{data.pet.category}</Badge>
+                    <Badge variant="secondary">{pet.type}</Badge>
+                    <Badge className="bg-emerald-600 hover:bg-emerald-600">{pet.category}</Badge>
                   </div>
-                </div>
+                </CardTitle>
               </CardHeader>
 
-              <CardContent className="space-y-5">
-                {data.media?.length > 0 && (
-                  <div className="grid gap-3 sm:grid-cols-3">
-                    {data.media.map((m: any) => (
-                      <div key={m.id} className="rounded-xl border p-2">
-                        {m.media_type === "IMAGE" ? (
-                          // eslint-disable-next-line @next/next/no-img-element
-                          <img src={m.url} alt="pet" className="h-32 w-full rounded-lg object-cover" />
-                        ) : (
-                          <div className="flex h-32 items-center justify-center rounded-lg bg-muted text-xs">
-                            VIDEO
-                          </div>
-                        )}
-                        <p className="mt-2 text-xs text-muted-foreground">
-                          {m.is_profile ? "Profile" : "Media"}
-                        </p>
-                      </div>
-                    ))}
+              <CardContent className="space-y-6">
+                {/* Images */}
+                {media.length > 0 ? (
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    {media
+                      .filter((m) => m.media_type === "IMAGE")
+                      .map((m) => (
+                        <div key={m.id} className="rounded-2xl border p-2">
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img src={m.url} alt="pet" className="h-64 w-full rounded-xl object-cover" />
+                          {m.is_profile && (
+                            <div className="mt-2 text-xs text-muted-foreground">Profile image</div>
+                          )}
+                        </div>
+                      ))}
+                  </div>
+                ) : (
+                  <div className="rounded-2xl border bg-white p-6 text-sm text-muted-foreground">
+                    No images uploaded.
                   </div>
                 )}
 
-                <div>
-                  <p className="text-sm font-medium">About</p>
-                  <p className="mt-1 text-sm text-muted-foreground">{data.pet.about || "—"}</p>
+                {/* Info */}
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <Info label="Location" value={pet.location} />
+                  <Info label="Breed" value={pet.breed} />
+                  <Info label="Age" value={pet.age != null ? `${pet.age}` : null} />
+                  <Info label="Sex" value={pet.sex} />
+                  <Info label="Adoption fee" value={pet.adoption_fee != null ? `${pet.adoption_fee}` : null} />
+                  <Info label="Contact" value={pet.contact_info} />
                 </div>
 
                 <div>
-                  <p className="text-sm font-medium">Contact</p>
-                  <p className="mt-1 text-sm text-muted-foreground">{data.pet.contact_info || "—"}</p>
+                  <div className="text-sm font-medium">About</div>
+                  <div className="mt-1 text-sm text-muted-foreground whitespace-pre-wrap">
+                    {pet.about || "—"}
+                  </div>
+                </div>
+
+                <div className="flex flex-wrap gap-2">
+                  {pet.vaccinated && <Badge variant="secondary">Vaccinated</Badge>}
+                  {pet.dewormed && <Badge variant="secondary">Dewormed</Badge>}
+                  {pet.sprayed && <Badge className="bg-emerald-600 hover:bg-emerald-600">Sprayed</Badge>}
                 </div>
               </CardContent>
             </Card>
@@ -123,3 +124,13 @@ export default function PetDetailPage() {
     </AuthGate>
   );
 }
+
+function Info({ label, value }: { label: string; value: string | null | undefined }) {
+  return (
+    <div className="rounded-2xl border bg-white p-4">
+      <div className="text-xs text-muted-foreground">{label}</div>
+      <div className="mt-1 text-sm font-medium">{value || "—"}</div>
+    </div>
+  );
+}
+
