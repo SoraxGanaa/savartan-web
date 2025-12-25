@@ -11,20 +11,41 @@ export default function Footer() {
               <span className="font-semibold">Savartan</span>
             </div>
             <p className="mt-2 text-sm text-muted-foreground">
-              Helping pets find safe homes across Mongolia.
+              Монгол даяар тэжээвэр болон эзэнгүй амьтдыг аюулгүй, найдвартай
+              орчинд шинэ эзэнтэй болоход нь холбож өгнө.
             </p>
           </div>
 
           <div className="flex flex-wrap gap-x-6 gap-y-2 text-sm">
-            <Link className="text-muted-foreground hover:text-foreground" href="/about">About</Link>
-            <Link className="text-muted-foreground hover:text-foreground" href="/how-it-works">How it works</Link>
-            <Link className="text-muted-foreground hover:text-foreground" href="/contact">Contact</Link>
-            <Link className="text-muted-foreground hover:text-foreground" href="/privacy">Privacy</Link>
+            <Link
+              className="text-muted-foreground hover:text-foreground"
+              href="/about"
+            >
+              Бидний тухай
+            </Link>
+            <Link
+              className="text-muted-foreground hover:text-foreground"
+              href="/how-it-works"
+            >
+              Хэрхэн ажилладаг вэ
+            </Link>
+            <Link
+              className="text-muted-foreground hover:text-foreground"
+              href="/contact"
+            >
+              Холбоо барих
+            </Link>
+            <Link
+              className="text-muted-foreground hover:text-foreground"
+              href="/privacy"
+            >
+              Нууцлалын бодлого
+            </Link>
           </div>
         </div>
 
         <p className="mt-8 text-xs text-muted-foreground">
-          © {new Date().getFullYear()} Savartan. All rights reserved.
+          © {new Date().getFullYear()} Savartan. Бүх эрх хуулиар хамгаалагдсан.
         </p>
       </div>
     </footer>

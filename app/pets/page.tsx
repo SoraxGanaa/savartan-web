@@ -31,11 +31,11 @@ type Pet = {
 };
 
 export default function PetsPage() {
-  // Top search inputs (not applied until Search clicked)
+  // Top search inputs
   const [search, setSearch] = useState("");
   const [location, setLocation] = useState("");
 
-  // Left filters UI state
+  // Left filters
   const [typeDog, setTypeDog] = useState(true);
   const [typeCat, setTypeCat] = useState(true);
 
@@ -46,7 +46,7 @@ export default function PetsPage() {
   const [vaccinatedOnly, setVaccinatedOnly] = useState(false);
   const [dewormedOnly, setDewormedOnly] = useState(false);
 
-  // Applied (only changes when user clicks Search/Apply)
+  // Applied filters
   const [applied, setApplied] = useState({
     search: "",
     location: "",
@@ -70,20 +70,12 @@ export default function PetsPage() {
     if (applied.search.trim()) q.set("search", applied.search.trim());
     if (applied.location.trim()) q.set("location", applied.location.trim());
 
-    // Category
     if (applied.category) q.set("category", applied.category);
-
-    // is_active
     if (applied.isActive) q.set("is_active", applied.isActive);
 
-    // Type rule:
-    // - both checked => no "type" param (means all)
-    // - one checked => type=DOG/CAT
-    // - none checked => return empty UI (avoid API confusion)
     if (applied.typeDog && !applied.typeCat) q.set("type", "DOG");
     if (!applied.typeDog && applied.typeCat) q.set("type", "CAT");
 
-    // Health booleans (true only)
     if (applied.sprayedOnly) q.set("sprayed", "true");
     if (applied.vaccinatedOnly) q.set("vaccinated", "true");
     if (applied.dewormedOnly) q.set("dewormed", "true");
@@ -94,7 +86,6 @@ export default function PetsPage() {
   async function load() {
     setErr(null);
 
-    // If user unchecks both DOG and CAT => show empty list
     if (!applied.typeDog && !applied.typeCat) {
       setPets([]);
       return;
@@ -106,7 +97,7 @@ export default function PetsPage() {
       if (!res.ok) throw new Error(await res.text());
       setPets(await res.json());
     } catch (e: any) {
-      setErr(e?.message ?? "Failed to load pets");
+      setErr(e?.message ?? "Амьтдын мэдээллийг ачааллахад алдаа гарлаа");
     } finally {
       setLoading(false);
     }
@@ -161,13 +152,13 @@ export default function PetsPage() {
         {/* Top bar */}
         <div className="border-b bg-white">
           <div className="mx-auto max-w-6xl px-4 py-6">
-            {/* Search bar top */}
+            {/* Search bar */}
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
               <div className="flex w-full items-center gap-2 rounded-2xl border bg-white px-3 py-2">
-                <span className="text-muted-foreground">🔎</span>
+                <span className="text-muted-foreground"></span>
                 <Input
                   className="border-0 shadow-none focus-visible:ring-0"
-                  placeholder="Search for a pet..."
+                  placeholder="Амьтнаар хайх..."
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
                 />
@@ -177,24 +168,35 @@ export default function PetsPage() {
                 className="h-11 rounded-2xl bg-emerald-600 hover:bg-emerald-700"
                 onClick={applyFilters}
               >
-                Search
+                Хайх
               </Button>
 
-              <Button variant="outline" className="h-11 rounded-2xl" onClick={resetAll}>
-                Reset
+              <Button
+                variant="outline"
+                className="h-11 rounded-2xl"
+                onClick={resetAll}
+              >
+                Цэвэрлэх
               </Button>
             </div>
 
             <div className="mt-4 flex items-center justify-between">
               <div>
-                <h1 className="text-lg font-semibold">Adoptable Pets</h1>
+                <h1 className="text-lg font-semibold">
+                  Үрчлүүлэх боломжтой амьтад
+                </h1>
                 <p className="text-sm text-muted-foreground">
-                  {loading ? "Loading..." : `${pets.length} pets found`}
+                  {loading
+                    ? "Ачаалж байна..."
+                    : `${pets.length} амьтан олдлоо`}
                 </p>
               </div>
 
-              <Button asChild className="rounded-2xl bg-emerald-600 hover:bg-emerald-700">
-                <Link href="/pets/new">Post pet</Link>
+              <Button
+                asChild
+                className="rounded-2xl bg-emerald-600 hover:bg-emerald-700"
+              >
+                <Link href="/pets/new">Амьтан нийтлэх</Link>
               </Button>
             </div>
 
@@ -206,40 +208,37 @@ export default function PetsPage() {
           </div>
         </div>
 
-        {/* Body: left filters + right cards */}
+        {/* Body */}
         <div className="mx-auto grid max-w-6xl gap-6 px-4 py-8 lg:grid-cols-[280px_1fr]">
-          {/* Left filters */}
+          {/* Filters */}
           <aside className="h-fit rounded-2xl border bg-white p-4">
-            <h2 className="text-sm font-semibold">Filters</h2>
+            <h2 className="text-sm font-semibold">Шүүлтүүр</h2>
 
             <div className="mt-5 space-y-5">
-              {/* Location */}
               <div className="space-y-2">
-                <Label>Location</Label>
+                <Label>Байршил</Label>
                 <Input
-                  placeholder="UB, Bayanzurkh..."
+                  placeholder="УБ, Баянзүрх..."
                   value={location}
                   onChange={(e) => setLocation(e.target.value)}
                 />
               </div>
 
-              {/* Category */}
               <div className="space-y-2">
-                <Label>Category</Label>
+                <Label>Ангилал</Label>
                 <select
                   className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
                   value={category}
                   onChange={(e) => setCategory(e.target.value as any)}
                 >
-                  <option value="">All</option>
-                  <option value="STRAY">STRAY</option>
-                  <option value="OWNED">OWNED</option>
+                  <option value="">Бүгд</option>
+                  <option value="STRAY">Эзэнгүй</option>
+                  <option value="OWNED">Эзэнтэй</option>
                 </select>
               </div>
 
-              {/* Type */}
               <div className="space-y-2">
-                <Label>Pet Type</Label>
+                <Label>Амьтны төрөл</Label>
 
                 <label className="flex items-center gap-2 text-sm">
                   <input
@@ -248,7 +247,7 @@ export default function PetsPage() {
                     onChange={(e) => setTypeDog(e.target.checked)}
                     className="h-4 w-4"
                   />
-                  Dog
+                  Нохой
                 </label>
 
                 <label className="flex items-center gap-2 text-sm">
@@ -258,31 +257,31 @@ export default function PetsPage() {
                     onChange={(e) => setTypeCat(e.target.checked)}
                     className="h-4 w-4"
                   />
-                  Cat
+                  Муур
                 </label>
 
                 {!typeDog && !typeCat && (
-                  <p className="text-xs text-red-600">Select at least one type.</p>
+                  <p className="text-xs text-red-600">
+                    Дор хаяж нэг төрлийг сонгоно уу.
+                  </p>
                 )}
               </div>
 
-              {/* Status */}
               <div className="space-y-2">
-                <Label>Status</Label>
+                <Label>Төлөв</Label>
                 <select
                   className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
                   value={isActive}
                   onChange={(e) => setIsActive(e.target.value as any)}
                 >
-                  <option value="">All</option>
-                  <option value="true">Active</option>
-                  <option value="false">Inactive</option>
+                  <option value="">Бүгд</option>
+                  <option value="true">Идэвхтэй</option>
+                  <option value="false">Идэвхгүй</option>
                 </select>
               </div>
 
-              {/* Health */}
               <div className="space-y-2">
-                <Label>Health</Label>
+                <Label>Эрүүл мэнд</Label>
 
                 <label className="flex items-center gap-2 text-sm">
                   <input
@@ -291,7 +290,7 @@ export default function PetsPage() {
                     onChange={(e) => setSprayedOnly(e.target.checked)}
                     className="h-4 w-4"
                   />
-                  Sprayed only
+                  Ариутгасан
                 </label>
 
                 <label className="flex items-center gap-2 text-sm">
@@ -301,7 +300,7 @@ export default function PetsPage() {
                     onChange={(e) => setVaccinatedOnly(e.target.checked)}
                     className="h-4 w-4"
                   />
-                  Vaccinated only
+                  Вакцинд хамрагдсан
                 </label>
 
                 <label className="flex items-center gap-2 text-sm">
@@ -311,24 +310,30 @@ export default function PetsPage() {
                     onChange={(e) => setDewormedOnly(e.target.checked)}
                     className="h-4 w-4"
                   />
-                  Dewormed only
+                  Туулга хийлгэсэн
                 </label>
               </div>
 
-              <Button variant="outline" className="w-full rounded-2xl" onClick={applyFilters}>
-                Apply
+              <Button
+                variant="outline"
+                className="w-full rounded-2xl"
+                onClick={applyFilters}
+              >
+                Шүүлтүүр хэрэгжүүлэх
               </Button>
             </div>
           </aside>
 
-          {/* Right cards */}
+          {/* Cards */}
           <section>
             {loading ? (
-              <div className="text-sm text-muted-foreground">Loading pets...</div>
+              <div className="text-sm text-muted-foreground">
+                Амьтдын мэдээллийг ачаалж байна...
+              </div>
             ) : pets.length === 0 ? (
               <Card className="rounded-2xl">
                 <CardContent className="p-6 text-sm text-muted-foreground">
-                  No pets found. Try adjusting search or filters.
+                  Тохирох амьтан олдсонгүй. Хайлтаа өөрчилж үзнэ үү.
                 </CardContent>
               </Card>
             ) : (
@@ -346,43 +351,45 @@ export default function PetsPage() {
                           />
                         ) : (
                           <div className="flex h-44 w-full items-center justify-center rounded-xl bg-muted text-xs text-muted-foreground">
-                            No image
+                            Зураг байхгүй
                           </div>
                         )}
 
                         <div className="absolute left-2 top-2 flex flex-wrap gap-2">
                           {p.sprayed && (
                             <span className="rounded-full bg-emerald-600 px-2 py-1 text-xs text-white">
-                              Sprayed
+                              Ариутгасан
                             </span>
                           )}
                           {p.vaccinated && (
                             <span className="rounded-full bg-white/90 px-2 py-1 text-xs">
-                              Vaccinated
+                              Вакцинтай
                             </span>
                           )}
                           {p.dewormed && (
                             <span className="rounded-full bg-white/90 px-2 py-1 text-xs">
-                              Dewormed
+                              Туулгатай
                             </span>
                           )}
                         </div>
-
-              
                       </div>
 
                       <div className="mt-3 flex items-start justify-between gap-3">
                         <div className="min-w-0">
-                          <p className="truncate text-base font-semibold">{p.name}</p>
+                          <p className="truncate text-base font-semibold">
+                            {p.name}
+                          </p>
                           <p className="mt-1 text-xs text-muted-foreground">
-                             {p.location || "Unknown"}
+                            {p.location || "Байршил тодорхойгүй"}
                           </p>
                         </div>
 
                         <div className="flex flex-col items-end gap-2">
-                          <Badge variant="secondary">{p.type}</Badge>
+                          <Badge variant="secondary">
+                            {p.type === "DOG" ? "Нохой" : "Муур"}
+                          </Badge>
                           <Badge className="bg-emerald-600 hover:bg-emerald-600">
-                            {p.category}
+                            {p.category === "STRAY" ? "Эзэнгүй" : "Эзэнтэй"}
                           </Badge>
                         </div>
                       </div>
@@ -391,7 +398,9 @@ export default function PetsPage() {
                         asChild
                         className="mt-3 w-full rounded-xl bg-emerald-600 hover:bg-emerald-700"
                       >
-                        <Link href={`/pets/${p.id}`}>View Details</Link>
+                        <Link href={`/pets/${p.id}`}>
+                          Дэлгэрэнгүй үзэх
+                        </Link>
                       </Button>
                     </CardContent>
                   </Card>
